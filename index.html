@@ -15,12 +15,17 @@
         .score-num { font-size: 2rem; color: var(--gold); font-weight: bold; }
         .btn { padding: 12px; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; margin: 3px; transition: 0.3s; }
         .btn-gold { background: var(--gold); color: var(--navy); width: 100%; }
+        .btn-red { background: var(--red); color: white; width: 100%; }
         .btn-ctrl { background: #444; color: white; padding: 2px 10px; font-size: 1rem; margin: 2px; }
         .word-input { width: 90%; padding: 10px; margin: 5px auto; border-radius: 8px; border: none; text-align: center; font-weight: bold; display: block; }
-        .word-card { background: var(--white); color: var(--navy); padding: 15px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; margin: 8px 0; cursor: pointer; border: 4px solid transparent; }
+        .word-card { background: var(--white); color: var(--navy); padding: 15px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; margin: 8px 0; cursor: pointer; border: 4px solid transparent; min-height: 30px; }
         .word-card.done { background: var(--green) !important; color: white !important; border-color: var(--gold); }
+        .word-card.hidden-word { background: rgba(255,255,255,0.05); color: transparent; border: 2px dashed rgba(255,255,255,0.2); }
         .clue-counter { font-size: 3.5rem; color: var(--green); font-weight: bold; display: block; }
         .status-tag { font-size: 0.75rem; display: block; margin-top: 5px; color: #ffd700; opacity: 0.8; }
+        .result-msg { font-size: 2rem; font-weight: bold; padding: 20px; margin: 10px; border-radius: 15px; }
+        .win-bg { background: var(--green); color: white; }
+        .lose-bg { background: var(--red); color: white; }
     </style>
 </head>
 <body>
@@ -28,7 +33,7 @@
 <div class="container">
     <div class="scoreboard">
         <div class="score-box">
-            <span>لاعب 1</span>
+            <span id="name1-display">لاعب 1</span>
             <span class="score-num" id="score1-val">0</span>
             <div id="admin-score-btns-1" class="hidden">
                 <button class="btn btn-ctrl" onclick="updateScore('score1', 1)">+</button>
@@ -36,7 +41,7 @@
             </div>
         </div>
         <div class="score-box">
-            <span>لاعب 2</span>
+            <span id="name2-display">لاعب 2</span>
             <span class="score-num" id="score2-val">0</span>
             <div id="admin-score-btns-2" class="hidden">
                 <button class="btn btn-ctrl" onclick="updateScore('score2', 1)">+</button>
@@ -48,57 +53,46 @@
     <div id="screen-setup">
         <h1 style="color: var(--gold); text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">25 Words or Less</h1>
         <div class="box">
-            <button class="btn btn-gold" id="btn-admin" onclick="trySetRole('admin')">
-                👨‍🏫 دخول كمسؤول <span id="admin-status" class="status-tag">(جاري الفحص...)</span>
-            </button>
-            
-            <button class="btn btn-gold" id="btn-player1" style="background:#3b82f6; color:white;" onclick="trySetRole('player1')">
-                🎮 لاعب 1 <span id="p1-status" class="status-tag">(جاري الفحص...)</span>
-            </button>
-            
-            <button class="btn btn-gold" id="btn-player2" style="background:#a855f7; color:white;" onclick="trySetRole('player2')">
-                🎮 لاعب 2 <span id="p2-status" class="status-tag">(جاري الفحص...)</span>
-            </button>
-
-            <button class="btn" style="background: transparent; color: #777; font-size: 0.7rem; width: 100%; margin-top: 20px; border: 1px dashed #555;" onclick="resetLobbyWithPass()">تصفير الأدوار (كلمة سر 🔑)</button>
+            <button class="btn btn-gold" id="btn-admin" onclick="trySetRole('admin')">👨‍🏫 دخول كمسؤول <span id="admin-status" class="status-tag">...</span></button>
+            <button class="btn btn-gold" id="btn-player1" style="background:#3b82f6; color:white;" onclick="trySetRole('player1')">🎮 لاعب 1 <span id="p1-status" class="status-tag">...</span></button>
+            <button class="btn btn-gold" id="btn-player2" style="background:#a855f7; color:white;" onclick="trySetRole('player2')">🎮 لاعب 2 <span id="p2-status" class="status-tag">...</span></button>
+            <button class="btn btn-gold" id="btn-display" style="background:#64748b; color:white;" onclick="trySetRole('display')">📺 شاشة العرض</button>
+            <button class="btn" style="background: transparent; color: #777; font-size: 0.7rem; width: 100%; margin-top: 20px; border: 1px dashed #555;" onclick="resetLobbyWithPass()">تصفير الأدوار 🔑</button>
         </div>
     </div>
 
     <div id="screen-admin-setup" class="hidden">
         <div class="box">
-            <h3 style="color:var(--gold)">إعداد كلمات الجولة</h3>
-            <button class="btn" style="background:var(--green); color:white; width:95%; margin-bottom:15px;" onclick="generateMixedWords()">توليد كلمات تلقائي (2 سهل، 2 متوسط، 1 صعب) ✨</button>
-            
-            <input type="text" id="w1" class="word-input" placeholder="الكلمة 1 (سهل)">
-            <input type="text" id="w2" class="word-input" placeholder="الكلمة 2 (سهل)">
-            <input type="text" id="w3" class="word-input" placeholder="الكلمة 3 (متوسط)">
-            <input type="text" id="w4" class="word-input" placeholder="الكلمة 4 (متوسط)">
-            <input type="text" id="w5" class="word-input" placeholder="الكلمة 5 (صعب)">
-            
-            <div style="margin-top:15px;">
-                <label>وقت الجولة (ثانية):</label> 
-                <input type="number" id="round-time" value="45" style="width:60px; padding:5px; border-radius:5px; border:none; text-align:center;">
-            </div>
-            
-            <button class="btn btn-gold" style="margin-top:20px; font-size:1.2rem;" onclick="adminStartBidding()">فتح المزايدة لللاعبين 🏁</button>
+            <h3 style="color:var(--gold)">إعداد الجولة</h3>
+            <input type="text" id="in-name1" class="word-input" placeholder="اسم لاعب 1">
+            <input type="text" id="in-name2" class="word-input" placeholder="اسم لاعب 2">
+            <hr>
+            <button class="btn" style="background:var(--green); color:white; width:95%;" onclick="generateMixedWords()">توليد كلمات تلقائي ✨</button>
+            <input type="text" id="w1" class="word-input" placeholder="الكلمة 1">
+            <input type="text" id="w2" class="word-input" placeholder="الكلمة 2">
+            <input type="text" id="w3" class="word-input" placeholder="الكلمة 3">
+            <input type="text" id="w4" class="word-input" placeholder="الكلمة 4">
+            <input type="text" id="w5" class="word-input" placeholder="الكلمة 5">
+            <button class="btn btn-gold" onclick="adminStartBidding()">فتح المزايدة 🏁</button>
+            <button class="btn btn-red" onclick="leaveRole()">مغادرة المسؤول 🚪</button>
         </div>
     </div>
 
     <div id="screen-bidding" class="hidden">
         <div class="box">
-            <div id="bid-words-display" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:15px;"></div>
-            <div id="live-bid" style="font-size: 5rem; color: var(--gold); font-weight:bold; line-height:1;">25</div>
-            <p id="turn-info" style="font-size:1.2rem; margin:10px 0;">--</p>
+            <div id="bid-words-display" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div>
+            <div id="live-bid" style="font-size: 5rem; color: var(--gold); font-weight:bold;">25</div>
+            <p id="turn-info">--</p>
             <div id="bid-controls" class="hidden">
-                <button class="btn" style="background:var(--red); color:white; width:45%; font-size:1.5rem;" onclick="placeBid(1)">- 1</button>
-                <button class="btn" style="background:orange; color:white; width:45%; font-size:1.5rem;" onclick="placeBid(2)">- 2</button>
-                <button class="btn" onclick="giveUp()" style="background: #64748b; color: white; width: 93%; margin-top:10px;">انسحاب (Pass) 🏳️</button>
+                <button class="btn" style="background:var(--red); color:white; width:45%;" onclick="placeBid(1)">- 1</button>
+                <button class="btn" style="background:orange; color:white; width:45%;" onclick="placeBid(2)">- 2</button>
+                <button class="btn btn-red" onclick="giveUp()">انسحاب 🏳️</button>
             </div>
             <div id="admin-start-play-btn" class="hidden">
-                <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
-                <p style="color:var(--gold)">انتهت المزايدة! اللاعب المستلم هو: <b id="winner-name-display">--</b></p>
-                <button class="btn btn-gold" onclick="confirmStartGame()">بدء التحدي الآن 🚀</button>
+                <p>المستلم: <b id="winner-name-display">--</b></p>
+                <button class="btn btn-gold" onclick="confirmStartGame()">بدء التحدي 🚀</button>
             </div>
+            <button class="btn btn-red" style="width:auto; padding:5px 20px; margin-top:20px;" onclick="leaveRole()">مغادرة 🚪</button>
         </div>
     </div>
 
@@ -107,29 +101,49 @@
             <div id="admin-word-board"></div>
             <span class="clue-counter" id="admin-clues-left">--</span>
             <div style="display:flex; gap:10px;">
-                <button class="btn" style="background:#f97316; color:white; flex:1;" onclick="togglePause()">إيقاف / تشغيل ⏸</button>
-                <button class="btn" style="background:var(--red); color:white; flex:2; font-size:1.2rem;" onclick="adminReduceClue()">وصف مأخوذ -1 💬</button>
+                <button class="btn" style="background:#f97316; color:white; flex:1;" onclick="togglePause()">⏸</button>
+                <button class="btn" style="background:var(--red); color:white; flex:2;" onclick="adminReduceClue()">وصف -1 💬</button>
             </div>
             <div style="font-size:1.8rem; margin-top:15px; color:var(--red)">⏳ <b id="admin-timer">--</b></div>
-            <button class="btn btn-gold" style="margin-top:15px;" onclick="nextRound()">إنهاء الجولة / جولة جديدة 🔄</button>
+            <button class="btn btn-gold" onclick="nextRound()">جولة جديدة 🔄</button>
         </div>
     </div>
 
     <div id="screen-player-view" class="hidden">
-        <div id="player-active-ui">
-            <div style="display:flex; justify-content: space-around; font-size: 1.5rem; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom:10px;">
-                <span style="color: var(--red); font-weight:bold;">⏳ <b id="play-timer">--</b></span>
-                <span style="color: var(--green); font-weight:bold;">💬 <b id="play-clues-left">--</b></span>
+        <div id="player-ui-content">
+            <div style="display:flex; justify-content: space-around; font-size: 1.5rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 15px;">
+                <span style="color: var(--red);">⏳ <b id="play-timer">--</b></span>
+                <span style="color: var(--green);">💬 <b id="play-clues-left">--</b></span>
             </div>
             <div id="player-words-board"></div>
+            <div id="player-msg-box"></div>
         </div>
-        <div id="player-time-up" class="hidden" style="font-size:3rem; color:var(--red); padding:50px 0; font-weight:bold;">انتهى الوقت! ⏰</div>
+        <button class="btn btn-red" onclick="leaveRole()">مغادرة 🚪</button>
+    </div>
+
+    <div id="screen-display-mode" class="hidden">
+        <div class="box">
+            <div id="tv-bidding-area">
+                <h2 style="color:var(--gold)">المزايدة الحالية</h2>
+                <div id="tv-bid-val" style="font-size: 8rem; color:var(--gold); font-weight:bold;">25</div>
+            </div>
+            <div id="tv-playing-area" class="hidden">
+                <div id="tv-words-board"></div>
+                <div style="display:flex; justify-content: space-around; font-size: 3rem; margin-top:20px;">
+                    <span style="color:var(--red)">⏳ <b id="tv-timer">--</b></span>
+                    <span style="color:var(--green)">💬 <b id="tv-clues">--</b></span>
+                </div>
+            </div>
+            <div id="tv-msg-box"></div>
+            <button class="btn btn-red" style="width:auto; margin-top:20px;" onclick="leaveRole()">إنهاء العرض 🚪</button>
+        </div>
     </div>
 
     <div id="screen-waiting" class="hidden">
-        <div class="box" style="padding:40px 10px;">
+        <div class="box">
             <h2 id="wait-msg">بانتظار المسؤول... ⏳</h2>
-            <div id="view-timer-box" class="hidden" style="font-size: 4rem; color: var(--red); font-weight:bold; margin-top:20px;">⏳ <span id="view-timer">--</span></div>
+            <div id="view-timer-box" class="hidden" style="font-size: 3rem; color: var(--red);">⏳ <span id="view-timer">--</span></div>
+            <button class="btn btn-red" onclick="leaveRole()">مغادرة 🚪</button>
         </div>
     </div>
 </div>
@@ -142,9 +156,6 @@
         apiKey: "AIzaSyAcBZbDgEcK5cP_tMZtMw5pxoOiPH9Tvwo",
         authDomain: "game-b1d10.firebaseapp.com",
         projectId: "game-b1d10",
-        storageBucket: "game-b1d10.firebasestorage.app",
-        messagingSenderId: "54617144366",
-        appId: "1:54617144366:web:47eece611357e670ef73bf",
         databaseURL: "https://game-b1d10-default-rtdb.firebaseio.com"
     };
 
@@ -154,199 +165,235 @@
 
     let myRole = "";
     let timerId = null;
-    let usedWordsGlobal = [];
     const RESET_PASS = "5361679";
 
     const wordBank = {
-        easy: ["بيت", "شمس", "قلم", "كتاب", "موز", "تفاح", "ماء", "باب", "سيارة", "قطة", "كلب", "بنت", "ولد", "مدرسة", "كرسي", "طاولة", "قمر", "نجم", "خبز", "لبن", "عين", "يد", "رجل", "شعر", "أنف", "أذن", "فم", "سمك", "طير", "ورد", "شجر", "بحر", "نهر", "جبل", "ثلج", "نار", "هواء", "أرض", "سماء", "نوم", "لعب", "أكل", "شرب", "ضحك", "بكاء", "فرح", "حزن", "كبير", "صغير", "طويل", "قصير", "سريع", "بطيء", "حار", "بارد", "حلو", "مر", "أبيض", "أسود", "أحمر", "أزرق", "أخضر", "أصفر", "كرة", "ساعة", "نظارة", "حقيبة", "حذاء", "قميص", "بنطلون", "مفتاح", "جوال", "تلفاز", "ملعقة", "شوكة", "سكين", "صحن", "كوب", "فرشاة", "صابون", "منشفة", "سرير", "وسادة", "غطاء", "نافذة", "صورة", "ورقة", "ألوان", "رسم", "قصة", "لعبة", "صديق", "أخ", "أخت", "أب", "أم", "جد", "جدة", "خال", "عم"],
-        med: ["كمبيوتر", "مستشفى", "مهندس", "طبيب", "محامي", "شرطي", "طيار", "مطار", "سفر", "فندق", "مطعم", "سوق", "متحف", "حديقة", "مزرعة", "قرية", "مدينة", "دولة", "عالم", "فضاء", "كوكب", "صاروخ", "غواصة", "سفينة", "قطار", "باص", "دراجة", "مسبح", "رياضة", "سباحة", "ملاكمة", "تنس", "كرة قدم", "ملعب", "حكم", "مدرب", "فوز", "خسارة", "تعادل", "كأس", "ميدالية", "احتفال", "موسيقى", "عزف", "بيانو", "جيتار", "راديو", "صحافة", "مجلة", "كتابة", "قراءة", "مكتبة", "بحث", "تجربة", "مختبر", "كيمياء", "فيزياء", "تاريخ", "جغرافيا", "رياضيات", "هندسة", "كهرباء", "طاقة", "بيئة", "تلوث", "إعادة تدوير", "غابة", "صحراء", "بركان", "زلزال", "عاصفة", "مطر", "غيوم", "رعد", "برق", "خريف", "شتاء", "ربيع", "صيف", "عطلة", "رحلة", "تخييم", "صيد", "طبخ", "وصفة", "بهارات", "حلويات", "فاكهة", "خضروات", "لحم", "دجاج", "عصير", "قهوة", "شاي", "عسل", "زيتون", "تراث", "عادات", "تقاليد", "ملابس", "موضة"],
-        hard: ["ديمقراطية", "فلسفة", "منطق", "اشتراكية", "رأسمالية", "تضخم", "بورصة", "استثمار", "تكنولوجيا", "ذكاء اصطناعي", "برمجة", "خوارزمية", "تشفير", "خصوصية", "إنترنت", "اتصالات", "قمر صناعي", "تلسكوب", "مجهر", "خلية", "جينات", "تطور", "مناعة", "فيروس", "بكتيريا", "دواء", "لقاح", "جراحة", "تخدير", "أشعة", "سرطان", "مرض", "علاج", "وقاية", "صحة", "تغذية", "بروتين", "فيتامين", "كربوهيدرات", "سعرات", "تمثيل غذائي", "وعي", "إدراك", "ذاكرة", "ذكاء", "إبداع", "خيال", "إرادة", "طموح", "نجاح", "فشل", "تجربة", "حكمة", "معرفة", "ثقافة", "فن", "نحت", "عمارة", "أوبرا", "مسرح", "سينما", "إخراج", "سيناريو", "تمثيل", "دراما", "كوميديا", "تراجيديا", "أسطورة", "خرافة", "رواية", "شعر", "نثر", "بلاغة", "لغويات", "نحو", "صرف", "اشتقاق", "ترجمة", "تأويل", "نقد", "تحليل", "استنتاج", "استدلال", "برهان", "نظرية", "فرضية", "قانون", "عدالة", "مساواة", "حرية", "حقوق", "واجبات", "مسؤولية", "أخلاق", "قيم", "مبادئ", "ضمير", "تسامح", "تعايش"]
+        easy: ["بيت", "شمس", "قلم", "كتاب", "موز", "تفاح", "ماء", "باب", "سيارة", "قطة", "كلب", "بنت", "ولد", "مدرسة", "كرسي", "طاولة", "قمر", "نجم", "خبز", "لبن", "عين", "يد", "رجل", "شعر", "أنف", "أذن", "فم", "سمك", "طير", "ورد", "شجر", "بحر", "نهر", "جبل", "ثلج", "نار", "هواء", "أرض", "سماء", "نوم", "لعب", "أكل", "شرب", "ضحك", "بكاء", "فرح", "حزن", "كرة", "ساعة", "نظارة", "حقيبة", "حذاء", "قميص"],
+        med: ["كمبيوتر", "مستشفى", "مهندس", "طبيب", "محامي", "شرطي", "طيار", "مطار", "سفر", "فندق", "مطعم", "سوق", "متحف", "حديقة", "مزرعة", "قرية", "مدينة", "دولة", "فضاء", "كوكب", "صاروخ", "غواصة", "سفينة", "قطار", "باص", "دراجة", "مسبح", "رياضة", "سباحة", "ملاكمة", "تنس", "كرة قدم", "ملعب", "حكم", "مدرب", "فوز", "خسارة"],
+        hard: ["ديمقراطية", "فلسفة", "منطق", "اشتراكية", "رأسمالية", "تضخم", "بورصة", "استثمار", "تكنولوجيا", "ذكاء اصطناعي", "برمجة", "خوارزمية", "تشفير", "خصوصية", "إنترنت", "اتصالات", "قمر صناعي", "تلسكوب", "مجهر", "خلية", "جينات", "تطور", "مناعة", "فيروس", "بكتيريا", "دواء", "لقاح", "جراحة", "تخدير", "أشعة"]
     };
 
+    // مراقبة البيانات باستمرار
     onValue(gameRef, (snap) => {
-        const data = snap.val();
-        if(!data) return;
+        const d = snap.val(); if(!d) return;
         
-        document.getElementById('score1-val').innerText = data.score1 || 0;
-        document.getElementById('score2-val').innerText = data.score2 || 0;
+        // تحديث النقاط والأسماء للجميع
+        document.getElementById('score1-val').innerText = d.score1 || 0;
+        document.getElementById('score2-val').innerText = d.score2 || 0;
+        document.getElementById('name1-display').innerText = d.name1 || "لاعب 1";
+        document.getElementById('name2-display').innerText = d.name2 || "لاعب 2";
+        
+        // تحديث حالة الأزرار في الصفحة الرئيسية
+        document.getElementById('admin-status').innerText = d.admin_occupied ? "(مشغول)" : "(متوفر)";
+        document.getElementById('p1-status').innerText = d.p1_occupied ? "(مشغول)" : "(متوفر)";
+        document.getElementById('p2-status').innerText = d.p2_occupied ? "(مشغول)" : "(متوفر)";
 
-        document.getElementById('admin-status').innerText = data.admin_occupied ? "(مشغول)" : "(متوفر)";
-        document.getElementById('btn-admin').disabled = data.admin_occupied && myRole !== 'admin';
-        document.getElementById('btn-admin').style.opacity = (data.admin_occupied && myRole !== 'admin') ? "0.5" : "1";
+        if(!myRole) return; // إذا لم يختار دور بعد، لا يكمل التحديثات الداخلية
 
-        document.getElementById('p1-status').innerText = data.p1_occupied ? "(مشغول)" : "(متوفر)";
-        document.getElementById('btn-player1').disabled = data.p1_occupied && myRole !== 'player1';
-        document.getElementById('btn-player1').style.opacity = (data.p1_occupied && myRole !== 'player1') ? "0.5" : "1";
-
-        document.getElementById('p2-status').innerText = data.p2_occupied ? "(مشغول)" : "(متوفر)";
-        document.getElementById('btn-player2').disabled = data.p2_occupied && myRole !== 'player2';
-        document.getElementById('btn-player2').style.opacity = (data.p2_occupied && myRole !== 'player2') ? "0.5" : "1";
+        // التحكم في الشاشات بناءً على الحالة (Status)
+        if(d.status === "bidding") {
+            showScreen(myRole === 'display' ? 'screen-display-mode' : (myRole === 'admin' ? 'screen-bidding' : ( (myRole === 'player1' || myRole === 'player2') ? 'screen-bidding' : 'screen-waiting')));
+            document.getElementById('live-bid').innerText = d.currentBid;
+            document.getElementById('tv-bid-val').innerText = d.currentBid;
+            document.getElementById('tv-playing-area').classList.add('hidden');
+            document.getElementById('tv-bidding-area').classList.remove('hidden');
+            document.getElementById('turn-info').innerText = (d.turn === myRole) ? "دورك الآن!" : "انتظر المزايدة...";
+            renderWordsList('bid-words-display', d.words);
+            (myRole === d.turn) ? document.getElementById('bid-controls').classList.remove('hidden') : document.getElementById('bid-controls').classList.add('hidden');
+        } 
+        else if(d.status === "bidding_finished") {
+            if(myRole === 'admin') {
+                showScreen('screen-bidding');
+                document.getElementById('admin-start-play-btn').classList.remove('hidden');
+                document.getElementById('winner-name-display').innerText = d[d.winner === 'player1' ? 'name1' : 'name2'];
+            } else if(myRole === 'display') {
+                showScreen('screen-display-mode');
+            } else {
+                showScreen('screen-waiting');
+            }
+        }
+        else if(d.status === "playing") {
+            updateGameUI(d);
+        }
+        else if(d.status === "waiting_for_admin" || !d.status) {
+            if(myRole === 'admin') showScreen('screen-admin-setup');
+            else if(myRole === 'display') {
+                showScreen('screen-display-mode');
+                document.getElementById('tv-playing-area').classList.add('hidden');
+                document.getElementById('tv-bidding-area').classList.remove('hidden');
+                document.getElementById('tv-bid-val').innerText = "25";
+            } else {
+                showScreen('screen-waiting');
+            }
+        }
     });
 
     window.trySetRole = async (role) => {
-        const snapshot = await get(gameRef);
-        const data = snapshot.val() || {};
-        if (role === 'admin' && data.admin_occupied) return alert("هناك مسؤول آخر بالفعل!");
-        if (role === 'player1' && data.p1_occupied) return alert("لاعب 1 محجوز!");
-        if (role === 'player2' && data.p2_occupied) return alert("لاعب 2 محجوز!");
-        if (role === 'admin') await update(gameRef, { admin_occupied: true });
-        if (role === 'player1') await update(gameRef, { p1_occupied: true });
-        if (role === 'player2') await update(gameRef, { p2_occupied: true });
+        const s = await get(gameRef); const d = s.val() || {};
+        if (role !== 'display' && d[role + '_occupied']) return alert("محجوز!");
+        
+        // تحديث القاعدة بأن الدور أصبح مشغولاً
+        if (role !== 'display') await update(gameRef, { [role + '_occupied']: true });
         myRole = role;
+
+        // إخفاء الرئيسية وإظهار الشاشة المناسبة فوراً
         document.getElementById('screen-setup').classList.add('hidden');
         if(role === 'admin') {
             document.getElementById('admin-score-btns-1').classList.remove('hidden');
             document.getElementById('admin-score-btns-2').classList.remove('hidden');
             showScreen('screen-admin-setup');
-        } else showScreen('screen-waiting');
-        listenToGame();
+        } else if(role === 'display') {
+            showScreen('screen-display-mode');
+        } else {
+            showScreen('screen-waiting');
+        }
+    };
+
+    window.leaveRole = async () => {
+        if(myRole && myRole !== 'display') await update(gameRef, { [myRole + '_occupied']: false });
+        location.reload();
     };
 
     window.generateMixedWords = () => {
-        const getWords = (type, count) => {
-            let pool = wordBank[type].filter(w => !usedWordsGlobal.includes(w));
-            if(pool.length < count) { usedWordsGlobal = []; pool = wordBank[type]; }
-            let sel = [];
-            for(let i=0; i<count; i++) {
-                let r = Math.floor(Math.random()*pool.length);
-                sel.push(pool.splice(r,1)[0]);
-            }
-            return sel;
-        };
-        const finalSet = [...getWords('easy', 2), ...getWords('med', 2), ...getWords('hard', 1)];
-        usedWordsGlobal.push(...finalSet);
-        finalSet.forEach((w, i) => document.getElementById(`w${i+1}`).value = w);
+        const getW = (t, c) => { let p = [...wordBank[t]]; let r = []; for(let i=0; i<c; i++) r.push(p.splice(Math.floor(Math.random()*p.length),1)[0]); return r; };
+        const final = [...getW('easy', 2), ...getW('med', 2), ...getW('hard', 1)];
+        final.forEach((w, i) => document.getElementById(`w${i+1}`).value = w);
     };
 
     window.adminStartBidding = () => {
-        const words = [1,2,3,4,5].map(i => document.getElementById(`w${i}`).value.trim());
-        if(words.some(w => w === "")) return alert("املأ جميع الكلمات أولاً!");
         update(gameRef, { 
-            status: "bidding", words: words, currentBid: 25, turn: "player1", 
-            timeLeft: parseInt(document.getElementById('round-time').value),
-            isPaused: false, completedWords: [false,false,false,false,false],
-            winner: "" // تصفير الفائز القديم
+            status: "bidding", currentBid: 25, turn: "player1", 
+            name1: document.getElementById('in-name1').value || "لاعب 1",
+            name2: document.getElementById('in-name2').value || "لاعب 2",
+            words: [1,2,3,4,5].map(i => document.getElementById(`w${i}`).value),
+            completedWords: [false,false,false,false,false],
+            timeLeft: 45, isPaused: false, resultMarked: false
         });
     };
 
-    // دالة الانسحاب المعدلة: لا تشغل اللعبة بل تضع اسم الفائز وتنتظر المسؤول
-    window.giveUp = () => {
-        onValue(gameRef, s => {
-            const currentWinner = myRole === 'player1' ? 'player2' : 'player1';
-            update(gameRef, { 
-                status: "bidding_finished", // حالة جديدة مؤقتة
-                winner: currentWinner,
-                clues: s.val().currentBid
-            });
-        }, {onlyOnce:true});
-    };
+    window.placeBid = (n) => get(gameRef).then(s => update(gameRef, { currentBid: Math.max(1, s.val().currentBid - n), turn: myRole === 'player1' ? 'player2' : 'player1' }));
+    
+    window.giveUp = () => get(gameRef).then(s => {
+        const win = myRole === 'player1' ? 'player2' : 'player1';
+        update(gameRef, { status: "bidding_finished", winner: win, clues: s.val().currentBid });
+    });
 
-    // المسؤول يضغط على هذا الزر لبدء اللعب فعلياً
-    window.confirmStartGame = () => {
-        update(gameRef, { status: "playing" });
-    };
+    window.confirmStartGame = () => update(gameRef, { status: "playing" });
 
-    function listenToGame() {
-        onValue(gameRef, (snap) => {
-            const d = snap.val(); if(!d || !myRole) return;
-
-            if(d.status === "bidding") {
-                showScreen('screen-bidding');
-                document.getElementById('admin-start-play-btn').classList.add('hidden'); // إخفاء زر البدء أثناء المزايدة
-                document.getElementById('live-bid').innerText = d.currentBid;
-                document.getElementById('turn-info').innerText = (d.turn === myRole) ? "دورك الآن!" : "انتظر المزايدة...";
-                const bBox = document.getElementById('bid-words-display'); bBox.innerHTML = '';
-                d.words.forEach(w => { 
-                    let s = document.createElement('span'); 
-                    s.style.cssText = "background:white; color:navy; padding:5px 12px; border-radius:8px; font-weight:bold;";
-                    s.innerText = w; bBox.appendChild(s); 
-                });
-                myRole === d.turn ? document.getElementById('bid-controls').classList.remove('hidden') : document.getElementById('bid-controls').classList.add('hidden');
-            }
-            else if(d.status === "bidding_finished") {
-                showScreen('screen-bidding');
-                document.getElementById('bid-controls').classList.add('hidden');
-                document.getElementById('turn-info').innerText = "انتهت المزايدة! بانتظار المسؤول للبدء...";
-                if(myRole === 'admin') {
-                    document.getElementById('admin-start-play-btn').classList.remove('hidden');
-                    document.getElementById('winner-name-display').innerText = (d.winner === 'player1' ? "لاعب 1" : "لاعب 2");
-                }
-            }
-            else if(d.status === "playing") {
-                if(myRole === 'admin') {
-                    showScreen('screen-admin-play');
-                    renderBoard('admin-word-board', d, true);
-                    document.getElementById('admin-timer').innerText = d.timeLeft;
-                    document.getElementById('admin-clues-left').innerText = d.clues;
-                    if(!timerId) startTimer();
-                } else if(myRole === d.winner) {
-                    showScreen('screen-player-view');
-                    document.getElementById('play-timer').innerText = d.timeLeft;
-                    document.getElementById('play-clues-left').innerText = d.clues;
-                    if(d.timeLeft <= 0) {
-                        document.getElementById('player-active-ui').classList.add('hidden');
-                        document.getElementById('player-time-up').classList.remove('hidden');
-                    } else {
-                        document.getElementById('player-active-ui').classList.remove('hidden');
-                        document.getElementById('player-time-up').classList.add('hidden');
-                        renderBoard('player-words-board', d, false);
-                    }
-                } else {
-                    showScreen('screen-waiting');
-                    document.getElementById('view-timer-box').classList.remove('hidden');
-                    document.getElementById('view-timer').innerText = d.timeLeft;
-                    document.getElementById('wait-msg').innerText = "الجولة جارية الآن...";
-                }
-            }
-            else if(d.status === "waiting_for_admin") {
-                if(myRole === 'admin') showScreen('screen-admin-setup');
-                else {
-                    showScreen('screen-waiting');
-                    document.getElementById('view-timer-box').classList.add('hidden');
-                    document.getElementById('wait-msg').innerText = "بانتظار المسؤول لبدء الجولة... ⏳";
-                }
-            }
-        });
+    function updateGameUI(d) {
+        if(myRole === 'admin') {
+            showScreen('screen-admin-play');
+            renderAdminBoard(d);
+            document.getElementById('admin-timer').innerText = d.timeLeft;
+            document.getElementById('admin-clues-left').innerText = d.clues;
+            if(!timerId) startTimer();
+        } else if(myRole === d.winner) {
+            showScreen('screen-player-view');
+            document.getElementById('play-timer').innerText = d.timeLeft;
+            document.getElementById('play-clues-left').innerText = d.clues;
+            renderPlayerBoard(d, 'player-words-board', false);
+        } else if(myRole === 'display') {
+            showScreen('screen-display-mode');
+            document.getElementById('tv-bidding-area').classList.add('hidden');
+            document.getElementById('tv-playing-area').classList.remove('hidden');
+            document.getElementById('tv-timer').innerText = d.timeLeft;
+            document.getElementById('tv-clues').innerText = d.clues;
+            renderPlayerBoard(d, 'tv-words-board', true);
+        } else {
+            showScreen('screen-waiting');
+            document.getElementById('view-timer-box').classList.remove('hidden');
+            document.getElementById('view-timer').innerText = d.timeLeft;
+        }
+        checkGameOver(d);
     }
 
-    window.placeBid = (n) => { onValue(gameRef, s => { update(gameRef, { currentBid: Math.max(1, s.val().currentBid - n), turn: myRole === 'player1' ? 'player2' : 'player1' }); }, {onlyOnce:true}); };
-    window.adminReduceClue = () => { onValue(gameRef, s => { if(s.val().clues > 0) update(gameRef, { clues: s.val().clues - 1 }); }, {onlyOnce:true}); };
-    window.updateScore = (p, v) => { onValue(gameRef, s => { update(gameRef, { [p]: (s.val()[p] || 0) + v }); }, {onlyOnce:true}); };
-    window.nextRound = () => { if(timerId) { clearInterval(timerId); timerId = null; } update(gameRef, { status: "waiting_for_admin" }); };
-    window.togglePause = () => onValue(gameRef, s => update(gameRef, { isPaused: !s.val().isPaused }), {onlyOnce:true});
+    function checkGameOver(d) {
+        if(d.resultMarked) return;
+        let win = d.completedWords.every(v => v === true);
+        let lose = d.timeLeft <= 0 || d.clues < 0;
+
+        if(win || lose) {
+            if(timerId) { clearInterval(timerId); timerId = null; }
+            const msg = win ? "هذا العشم فيك ✅" : "ما ادري البلا فيك ولا في ربعك ❌";
+            const cls = win ? "win-bg" : "lose-bg";
+            
+            if(win) {
+                const scoreKey = d.winner === 'player1' ? 'score1' : 'score2';
+                update(gameRef, { [scoreKey]: (d[scoreKey] || 0) + 1, resultMarked: true });
+            } else if(lose) {
+                const otherPlayer = d.winner === 'player1' ? 'score2' : 'score1';
+                update(gameRef, { [otherPlayer]: (d[otherPlayer] || 0) + 1, resultMarked: true });
+            }
+
+            const html = `<div class="result-msg ${cls}">${msg}</div>`;
+            if(document.getElementById('tv-msg-box')) document.getElementById('tv-msg-box').innerHTML = html;
+            if(document.getElementById('player-msg-box')) document.getElementById('player-msg-box').innerHTML = html;
+        } else {
+            if(document.getElementById('tv-msg-box')) document.getElementById('tv-msg-box').innerHTML = "";
+            if(document.getElementById('player-msg-box')) document.getElementById('player-msg-box').innerHTML = "";
+        }
+    }
 
     function startTimer() {
+        if(timerId) clearInterval(timerId);
         timerId = setInterval(() => {
-            onValue(gameRef, s => {
-                const d = s.val(); if(!d || d.status !== 'playing' || d.isPaused) return;
-                if(d.timeLeft <= 0) { clearInterval(timerId); timerId = null; }
-                else update(gameRef, { timeLeft: d.timeLeft - 1 });
-            }, {onlyOnce:true});
+            get(gameRef).then(s => {
+                const d = s.val();
+                if(d && d.status === 'playing' && !d.isPaused && d.timeLeft > 0) update(gameRef, { timeLeft: d.timeLeft - 1 });
+            });
         }, 1000);
     }
 
-    function renderBoard(id, d, isAdmin) {
+    function renderWordsList(id, words) {
         const b = document.getElementById(id); b.innerHTML = '';
+        words.forEach(w => { b.innerHTML += `<span style="background:white; color:navy; padding:5px 10px; border-radius:8px; font-weight:bold; margin:2px;">${w}</span>`; });
+    }
+
+    function renderAdminBoard(d) {
+        const b = document.getElementById('admin-word-board'); b.innerHTML = '';
         d.words.forEach((w, i) => {
             const c = document.createElement('div'); c.className = 'word-card' + (d.completedWords[i] ? ' done' : '');
-            c.innerText = isAdmin ? w : (d.completedWords[i] ? w + " ✓" : w);
-            if(isAdmin) c.onclick = () => { let st = [...d.completedWords]; st[i] = !st[i]; update(gameRef, { completedWords: st }); };
+            c.innerText = w;
+            c.onclick = () => { let st = [...d.completedWords]; st[i] = !st[i]; update(gameRef, { completedWords: st }); };
             b.appendChild(c);
         });
     }
 
+    function renderPlayerBoard(d, boardId, isTV) {
+        const b = document.getElementById(boardId); b.innerHTML = '';
+        d.words.forEach((w, i) => {
+            const c = document.createElement('div');
+            if(d.completedWords[i]) {
+                c.className = 'word-card done';
+                c.innerText = w + " ✓";
+            } else {
+                c.className = isTV ? 'word-card hidden-word' : 'word-card';
+                c.innerText = isTV ? "???" : w;
+            }
+            b.appendChild(c);
+        });
+    }
+
+    window.adminReduceClue = () => get(gameRef).then(s => update(gameRef, { clues: s.val().clues - 1 }));
+    window.togglePause = () => get(gameRef).then(s => update(gameRef, { isPaused: !s.val().isPaused }));
+    window.nextRound = () => { if(timerId) clearInterval(timerId); timerId = null; update(gameRef, { status: "waiting_for_admin", resultMarked: false }); };
+    window.updateScore = (p, v) => get(gameRef).then(s => update(gameRef, { [p]: (s.val()[p] || 0) + v }));
+
     function showScreen(id) {
-        ['screen-setup', 'screen-admin-setup', 'screen-bidding', 'screen-admin-play', 'screen-player-view', 'screen-waiting'].forEach(s => document.getElementById(s).classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
+        const screens = ['screen-setup', 'screen-admin-setup', 'screen-bidding', 'screen-admin-play', 'screen-player-view', 'screen-waiting', 'screen-display-mode'];
+        screens.forEach(s => {
+            const el = document.getElementById(s);
+            if(el) el.classList.add('hidden');
+        });
+        const target = document.getElementById(id);
+        if(target) target.classList.remove('hidden');
     }
 
     window.resetLobbyWithPass = async () => {
-        const pass = prompt("أدخل كلمة السر لتصفير الأدوار:");
-        if (pass === RESET_PASS) {
-            await set(gameRef, { admin_occupied: false, p1_occupied: false, p2_occupied: false, score1: 0, score2: 0, status: "waiting_for_admin" });
-            alert("تم التصفير. سيتم إعادة تحميل الصفحة.");
+        if(prompt("كلمة السر:") === RESET_PASS) {
+            await set(gameRef, { admin_occupied: false, p1_occupied: false, p2_occupied: false, score1: 0, score2: 0, status: "waiting_for_admin", name1: "لاعب 1", name2: "لاعب 2" });
             location.reload();
-        } else if (pass !== null) alert("خطأ!");
+        }
     };
 </script>
 </body>
