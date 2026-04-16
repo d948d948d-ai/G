@@ -74,7 +74,7 @@
             <input type="text" id="w4" class="word-input" placeholder="الكلمة 4">
             <input type="text" id="w5" class="word-input" placeholder="الكلمة 5">
             <button class="btn btn-gold" onclick="adminStartBidding()">فتح المزايدة 🏁</button>
-            <button class="btn btn-red" onclick="leaveRole()">مغادرة المسؤول 🚪</button>
+            <button class="btn btn-red" onclick="leaveRole()">مغادرة 🚪</button>
         </div>
     </div>
 
@@ -92,7 +92,7 @@
                 <p>المستلم: <b id="winner-name-display">--</b></p>
                 <button class="btn btn-gold" onclick="confirmStartGame()">بدء التحدي 🚀</button>
             </div>
-            <button class="btn btn-red" style="width:auto; padding:5px 20px; margin-top:20px;" onclick="leaveRole()">مغادرة 🚪</button>
+            <button class="btn btn-red" style="width:auto; margin-top:20px;" onclick="leaveRole()">مغادرة 🚪</button>
         </div>
     </div>
 
@@ -135,7 +135,7 @@
                 </div>
             </div>
             <div id="tv-msg-box"></div>
-            <button class="btn btn-red" style="width:auto; margin-top:20px;" onclick="leaveRole()">إنهاء العرض 🚪</button>
+            <button class="btn btn-red" style="width:auto; margin-top:20px;" onclick="leaveRole()">مغادرة 🚪</button>
         </div>
     </div>
 
@@ -173,26 +173,25 @@
         hard: ["ديمقراطية", "فلسفة", "منطق", "اشتراكية", "رأسمالية", "تضخم", "بورصة", "استثمار", "تكنولوجيا", "ذكاء اصطناعي", "برمجة", "خوارزمية", "تشفير", "خصوصية", "إنترنت", "اتصالات", "قمر صناعي", "تلسكوب", "مجهر", "خلية", "جينات", "تطور", "مناعة", "فيروس", "بكتيريا", "دواء", "لقاح", "جراحة", "تخدير", "أشعة"]
     };
 
-    // مراقبة البيانات باستمرار
     onValue(gameRef, (snap) => {
         const d = snap.val(); if(!d) return;
         
-        // تحديث النقاط والأسماء للجميع
         document.getElementById('score1-val').innerText = d.score1 || 0;
         document.getElementById('score2-val').innerText = d.score2 || 0;
         document.getElementById('name1-display').innerText = d.name1 || "لاعب 1";
         document.getElementById('name2-display').innerText = d.name2 || "لاعب 2";
         
-        // تحديث حالة الأزرار في الصفحة الرئيسية
         document.getElementById('admin-status').innerText = d.admin_occupied ? "(مشغول)" : "(متوفر)";
         document.getElementById('p1-status').innerText = d.p1_occupied ? "(مشغول)" : "(متوفر)";
         document.getElementById('p2-status').innerText = d.p2_occupied ? "(مشغول)" : "(متوفر)";
 
-        if(!myRole) return; // إذا لم يختار دور بعد، لا يكمل التحديثات الداخلية
+        if(!myRole) return;
 
-        // التحكم في الشاشات بناءً على الحالة (Status)
+        // منطق تبديل الشاشات التلقائي للجميع
         if(d.status === "bidding") {
-            showScreen(myRole === 'display' ? 'screen-display-mode' : (myRole === 'admin' ? 'screen-bidding' : ( (myRole === 'player1' || myRole === 'player2') ? 'screen-bidding' : 'screen-waiting')));
+            if(myRole === 'display') showScreen('screen-display-mode');
+            else if(myRole === 'admin' || myRole === 'player1' || myRole === 'player2') showScreen('screen-bidding');
+            
             document.getElementById('live-bid').innerText = d.currentBid;
             document.getElementById('tv-bid-val').innerText = d.currentBid;
             document.getElementById('tv-playing-area').classList.add('hidden');
@@ -215,7 +214,7 @@
         else if(d.status === "playing") {
             updateGameUI(d);
         }
-        else if(d.status === "waiting_for_admin" || !d.status) {
+        else if(d.status === "waiting_for_admin") {
             if(myRole === 'admin') showScreen('screen-admin-setup');
             else if(myRole === 'display') {
                 showScreen('screen-display-mode');
@@ -230,14 +229,12 @@
 
     window.trySetRole = async (role) => {
         const s = await get(gameRef); const d = s.val() || {};
-        if (role !== 'display' && d[role + '_occupied']) return alert("محجوز!");
+        if (role !== 'display' && d[role + '_occupied']) return alert("هذا الدور محجوز!");
         
-        // تحديث القاعدة بأن الدور أصبح مشغولاً
-        if (role !== 'display') await update(gameRef, { [role + '_occupied']: true });
         myRole = role;
+        if (role !== 'display') await update(gameRef, { [role + '_occupied']: true });
 
-        // إخفاء الرئيسية وإظهار الشاشة المناسبة فوراً
-        document.getElementById('screen-setup').classList.add('hidden');
+        // انتقال فوري للمسؤول إلى شاشة الإعداد
         if(role === 'admin') {
             document.getElementById('admin-score-btns-1').classList.remove('hidden');
             document.getElementById('admin-score-btns-2').classList.remove('hidden');
@@ -267,17 +264,15 @@
             name2: document.getElementById('in-name2').value || "لاعب 2",
             words: [1,2,3,4,5].map(i => document.getElementById(`w${i}`).value),
             completedWords: [false,false,false,false,false],
-            timeLeft: 45, isPaused: false, resultMarked: false
+            timeLeft: 45, isPaused: false, resultMarked: false, winner: ""
         });
     };
 
     window.placeBid = (n) => get(gameRef).then(s => update(gameRef, { currentBid: Math.max(1, s.val().currentBid - n), turn: myRole === 'player1' ? 'player2' : 'player1' }));
-    
     window.giveUp = () => get(gameRef).then(s => {
         const win = myRole === 'player1' ? 'player2' : 'player1';
         update(gameRef, { status: "bidding_finished", winner: win, clues: s.val().currentBid });
     });
-
     window.confirmStartGame = () => update(gameRef, { status: "playing" });
 
     function updateGameUI(d) {
@@ -301,8 +296,8 @@
             renderPlayerBoard(d, 'tv-words-board', true);
         } else {
             showScreen('screen-waiting');
-            document.getElementById('view-timer-box').classList.remove('hidden');
             document.getElementById('view-timer').innerText = d.timeLeft;
+            document.getElementById('view-timer-box').classList.remove('hidden');
         }
         checkGameOver(d);
     }
@@ -328,9 +323,6 @@
             const html = `<div class="result-msg ${cls}">${msg}</div>`;
             if(document.getElementById('tv-msg-box')) document.getElementById('tv-msg-box').innerHTML = html;
             if(document.getElementById('player-msg-box')) document.getElementById('player-msg-box').innerHTML = html;
-        } else {
-            if(document.getElementById('tv-msg-box')) document.getElementById('tv-msg-box').innerHTML = "";
-            if(document.getElementById('player-msg-box')) document.getElementById('player-msg-box').innerHTML = "";
         }
     }
 
@@ -381,12 +373,8 @@
 
     function showScreen(id) {
         const screens = ['screen-setup', 'screen-admin-setup', 'screen-bidding', 'screen-admin-play', 'screen-player-view', 'screen-waiting', 'screen-display-mode'];
-        screens.forEach(s => {
-            const el = document.getElementById(s);
-            if(el) el.classList.add('hidden');
-        });
-        const target = document.getElementById(id);
-        if(target) target.classList.remove('hidden');
+        screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
     }
 
     window.resetLobbyWithPass = async () => {
